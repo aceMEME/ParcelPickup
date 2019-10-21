@@ -16,14 +16,13 @@ public class ExploreStrategy implements IGoalStrategy{
 		HashMap<Coordinate, MapTile> seen = map.getMap();
 		
     	ArrayList<Coordinate > immediateNeighbours = new ArrayList<>();
-//    	
-//    	
+
+  	
     	Coordinate up  = new Coordinate (currentPost.x, currentPost.y + 1);
     	Coordinate right  = new Coordinate (currentPost.x + 1, currentPost.y );
     	Coordinate left  = new Coordinate (currentPost.x - 1, currentPost.y );
     	Coordinate down  = new Coordinate (currentPost.x, currentPost.y - 1);
-//
-//    	
+   	
     	immediateNeighbours.add(up);
     	immediateNeighbours.add(right);
     	immediateNeighbours.add(left);
@@ -44,7 +43,7 @@ public class ExploreStrategy implements IGoalStrategy{
     		if (!map.visited(coord)  && !map.getWalls().containsKey(coord)) {
     			   			
     			unexplored.put(coord, seen.get(coord));
-    			
+    			System.out.println("to be explored " + coord.x + " , " + coord.y);
     		}
     		
     	}
@@ -53,7 +52,9 @@ public class ExploreStrategy implements IGoalStrategy{
     	
     	if (unexplored.size() >= 0) {
     		
-    		int min = 1000000;
+    		
+    		
+    		int min = 1000000000;
     		
     		Coordinate goal = null;
     		
@@ -61,8 +62,14 @@ public class ExploreStrategy implements IGoalStrategy{
     			
     			if (  distanceBetweenCoordinates(  currentPost, coord)  <  min   ) {
     				
-    				min = distanceBetweenCoordinates(currentPost,coord);
-    				goal = map.BFSSearch(currentPost, coord);
+    				if (map.BFSSearch(currentPost, coord) != null){
+    					
+        				min = distanceBetweenCoordinates(currentPost,coord);
+        				goal = map.BFSSearch(currentPost, coord);
+
+    					
+    				}
+    				
     				
     			}
     			

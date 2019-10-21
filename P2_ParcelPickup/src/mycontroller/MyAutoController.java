@@ -21,26 +21,18 @@ public class MyAutoController extends CarController{
 		// How many minimum units the wall is away from the player.
 		private int wallSensitivity = 1;
 		
-		private boolean isFollowingWall = false; // This is set to true when the car starts sticking to a wall.
 		
 		// Car Speed to move at
 		private final int CAR_MAX_SPEED = 1;
-		
-		HashMap<Coordinate,MapTile> worldMap = World.getMap();
-		
+			
 		HashMap<Coordinate, Boolean> wallsFollowed = new HashMap<Coordinate, Boolean>();
 		
 		Coordinate startPosition;
 		
-		// Determines if time to head home 
-		boolean headHome = false;
 		// theMap responsible for tracking what we've seen + determining shortest path to our goal (dependent on strategy) 
 		MapSearch theMap;
-		
-		ArrayList<Coordinate> pastCoords;
-		
-		Set<Integer> minParcels;
-		int minParcelsCount;
+				
+		int minParcels;
 
 		
 
@@ -52,12 +44,8 @@ public class MyAutoController extends CarController{
 			theMap = new MapSearch();
 			startPosition = new Coordinate(getPosition());
 			theMap.visit(startPosition);
-			pastCoords = new ArrayList<Coordinate>();
+			minParcels = car.targetParcels;
 			
-//			minParcels = Simulation.getParcels();
-//			
-//			Iterator iter = minParcels.iterator();
-			minParcelsCount = 3;
 
 		}
 		
@@ -65,75 +53,63 @@ public class MyAutoController extends CarController{
 		public void update() {
 			// Gets what the car can see
 			HashMap<Coordinate, MapTile> currentView = getView();
-			
-			// ------------------------------------------------
-			// Just using the headHome mechanic at the moment to test heading to a point that we know how to get to 
-			// When agent reaches headHomePoint (currently by following the wall) it begins heading home
-			// As it reached the headHome point and updated its map accordingly, it must know the way home 
-			// At this point the BFS path finding logic kicks in and provides the coordinates to next square to go to
-			// moveToGoal handles the necessary movement to get there 
+			// Gets current position 
 			Coordinate current = new Coordinate(getPosition());
-						
+			
+			// Checks if car has visited this point before, if not mark as visited 
 			if (!theMap.visited(current)) {
 				
 			theMap.visit(current);
-			
-			
+				
 			}
 			
-			
+			// Add the information from what we're currently viewing to the MapSearch
 			theMap.applyNewView(currentView);
 			
+						
 			ExploreStrategy explore = new ExploreStrategy();
 			ParcelStrategy parcel = new ParcelStrategy();
 			ExitStrategy exit = new ExitStrategy();
 
 			HashMap<Coordinate, MapTile> parcels = theMap.getParcels();
 			
+			// Next coordinate we're going to move towards 
 			Coordinate next = null;
 			
 			int numFound = this.numParcelsFound();
 			
-			if (numFound == minParcelsCount) {
-				next = exit.getGoal(theMap, current);
+
+
+			// If we're not looking for an exit OR we are but havent seen an exit yet AND we've seen a parcel 
+			// Try and find a path to it 
+			if (theMap.getParcels().size() > 0) {
+				
+				next = GoalStrategyFactory.getInstance().getStrategy("parcel").getGoal(theMap, current);
+								
 			}
 			
-			if (next== null && theMap.getParcels().size() > 0) {
-				
-				next = parcel.getGoal(theMap, current) ;
-				
-				
+			// If we've picked up enough parcels, look for exit
+			// If no exit findable, search for a next state by explore strategy  
+			if (next == null && numFound == minParcels) {
+				next = GoalStrategyFactory.getInstance().getStrategy("exit").getGoal(theMap, current);
 			}
 			
-			System.out.println("Parcels size : " +  theMap.getParcels().size());
 			
+			// If we've found neither a path to a parcel or the exit (if we've found enough parcels), explore 
 			if (next == null) {
 				
-			next = explore.getGoal(theMap, current) ;
+				next = GoalStrategyFactory.getInstance().getStrategy("explore").getGoal(theMap, current);
 			
 			System.out.println("EXPLORE MODE");
 			
 			}
 			
-			else {
-				System.out.println("EXPLORE MODE");
-
-			}
-			
-			System.out.println("Head to " + next.x + " , " + next.y);
-			
-			
-
 
 			// If we're not moving, start moving 
 			if (getSpeed() == 0) {
-				
-				System.out.println("Not moving, need to start moving");
-				
+							
 				// If wall ahead of us, reverse 
-				if (checkWallAhead(getOrientation(), currentView) ) {
-					System.out.println("Reverse");
-					
+				if (checkWallAhead(getOrientation(), currentView) ) {				
 
 					applyReverseAcceleration();
 				}
@@ -156,10 +132,6 @@ public class MyAutoController extends CarController{
 		
 
 				
-
-				
-
-			
 
 
 		
@@ -269,8 +241,8 @@ public class MyAutoController extends CarController{
 			// Gather our positon relative to the goal
 			boolean sameX = false;
 			boolean sameY = false;
-			boolean greaterX = false;
-			boolean greaterY = false;
+			boolean onTheRight = false;
+			boolean above = false;
 			
 			// Input is 1 step away, so we're either on the same x level or on the same y level
 
@@ -283,11 +255,11 @@ public class MyAutoController extends CarController{
 			}
 			
 			if (currentPosition.x > goal.x) {
-				greaterX = true;
+				onTheRight = true;
 			}
 			
 			if (currentPosition.y > goal.y) {
-				greaterY = true;
+				above = true;
 			}
 				
 
@@ -302,7 +274,7 @@ public class MyAutoController extends CarController{
 
 				if (sameX) {
 					
-					if (greaterY) {
+					if (above) {
 						turnRight();
 					}
 					
@@ -315,7 +287,7 @@ public class MyAutoController extends CarController{
 				if (sameY) {
 					
 						
-						if (greaterX) {
+						if (onTheRight) {
 							
 							applyReverseAcceleration();
 							
@@ -337,7 +309,7 @@ public class MyAutoController extends CarController{
 				
 				if (sameX) {
 					
-					if(greaterY) {
+					if(above) {
 						turnLeft();
 					}
 					
@@ -349,7 +321,7 @@ public class MyAutoController extends CarController{
 				
 				if (sameY) {
 					
-					if (greaterX) {
+					if (onTheRight) {
 						
 						applyForwardAcceleration();
 						
@@ -369,7 +341,7 @@ public class MyAutoController extends CarController{
 				
 				if (sameX) {
 					
-					if (greaterY) {
+					if (above) {
 							
 						applyReverseAcceleration();
 							
@@ -385,7 +357,7 @@ public class MyAutoController extends CarController{
 				
 				if(sameY) {
 					
-					if (greaterX) {
+					if (onTheRight) {
 						
 						turnLeft();
 						
@@ -403,7 +375,7 @@ public class MyAutoController extends CarController{
 				
 				if (sameX) {
 					
-					if (greaterY) {
+					if (above) {
 							
 							applyForwardAcceleration();
 							
@@ -421,7 +393,7 @@ public class MyAutoController extends CarController{
 				
 				if(sameY) {
 					
-					if (greaterX) {
+					if (onTheRight) {
 						
 						turnRight();
 						
