@@ -1,6 +1,7 @@
 package mycontroller;
 
 import controller.CarController;
+import swen30006.driving.Simulation;
 import world.Car;
 import world.World;
 
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import tiles.MapTile;
 import tiles.MapTile.Type;
@@ -35,6 +37,12 @@ public class MyAutoController extends CarController{
 		// theMap responsible for tracking what we've seen + determining shortest path to our goal (dependent on strategy) 
 		MapSearch theMap;
 		
+		ArrayList<Coordinate> pastCoords;
+		
+		Set<Integer> minParcels;
+		int minParcelsCount;
+
+		
 
 		
 		public MyAutoController(Car car) {
@@ -43,7 +51,13 @@ public class MyAutoController extends CarController{
 			// Initialize the map + our initial position
 			theMap = new MapSearch();
 			startPosition = new Coordinate(getPosition());
-
+			theMap.visit(startPosition);
+			pastCoords = new ArrayList<Coordinate>();
+			
+//			minParcels = Simulation.getParcels();
+//			
+//			Iterator iter = minParcels.iterator();
+			minParcelsCount = 3;
 
 		}
 		
@@ -59,21 +73,56 @@ public class MyAutoController extends CarController{
 			// At this point the BFS path finding logic kicks in and provides the coordinates to next square to go to
 			// moveToGoal handles the necessary movement to get there 
 			Coordinate current = new Coordinate(getPosition());
-
-			Coordinate headHomePoint = new Coordinate(1,17);
-			
-			Coordinate next;
-			
-			if (current.equals(headHomePoint)) {
+						
+			if (!theMap.visited(current)) {
 				
-				headHome = true;
-				
+			theMap.visit(current);
+			
+			
 			}
-			System.out.println(headHome);
 			
-			// -------------------------------------------
 			
 			theMap.applyNewView(currentView);
+			
+			ExploreStrategy explore = new ExploreStrategy();
+			ParcelStrategy parcel = new ParcelStrategy();
+			ExitStrategy exit = new ExitStrategy();
+
+			HashMap<Coordinate, MapTile> parcels = theMap.getParcels();
+			
+			Coordinate next = null;
+			
+			int numFound = this.numParcelsFound();
+			
+			if (numFound == minParcelsCount) {
+				next = exit.getGoal(theMap, current);
+			}
+			
+			if (next== null && theMap.getParcels().size() > 0) {
+				
+				next = parcel.getGoal(theMap, current) ;
+				
+				
+			}
+			
+			System.out.println("Parcels size : " +  theMap.getParcels().size());
+			
+			if (next == null) {
+				
+			next = explore.getGoal(theMap, current) ;
+			
+			System.out.println("EXPLORE MODE");
+			
+			}
+			
+			else {
+				System.out.println("EXPLORE MODE");
+
+			}
+			
+			System.out.println("Head to " + next.x + " , " + next.y);
+			
+			
 
 
 			// If we're not moving, start moving 
@@ -97,45 +146,10 @@ public class MyAutoController extends CarController{
 				
 			}
 			
-			
+			moveToGoal(next, current, getOrientation());
 
-			// If we're heading home, follow the pathfinding logic we'll use for the rest of the project 
-			// the alternative is the default explore logic we'll replace with a dedicated exploration strategy 
-			if (headHome) {
-				
-				next = theMap.BFSSearch(current, startPosition);
 
-				System.out.println("Head to " + next.toString());
-											
-				moveToGoal(next, current, getOrientation());
 
-			}
-			
-			
-			else {		
-			
-			// checkStateChange();
-			if(getSpeed() < CAR_MAX_SPEED){       // Need speed to turn and progress toward the exit
-				applyForwardAcceleration();   // Tough luck if there's a wall in the way
-			}
-			if (isFollowingWall) {
-				// If wall no longer on left, turn left
-				if(!checkFollowingWall(getOrientation(), currentView)) {
-					turnLeft();
-				} else {
-					// If wall on left and wall straight ahead, turn right
-					if(checkWallAhead(getOrientation(), currentView)) {
-						turnRight();
-					}
-				}
-			} else {
-				// Start wall-following (with wall on left) as soon as we see a wall straight ahead
-				if(checkWallAhead(getOrientation(),currentView)) {
-					turnRight();
-					isFollowingWall = true;
-				}
-			}
-		}
 			
 			
 		}

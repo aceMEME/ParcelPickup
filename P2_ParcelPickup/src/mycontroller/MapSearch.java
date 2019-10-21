@@ -22,8 +22,12 @@ import world.World;
 public class MapSearch {
 	
 	
+	
 	// Map of the walls we've seen 
     private HashMap<Coordinate, MapTile> walls;
+    
+    // Map of tiles we've actually visited 
+    private ArrayList<Coordinate> visited;
     
     // Map of the exits seen 
     private HashMap<Coordinate, MapTile> exits;
@@ -41,6 +45,12 @@ public class MapSearch {
 		
 		System.out.println("Creating the map!");
 		
+	
+		
+
+		
+		this.visited = new ArrayList<Coordinate>();
+		
 		this.walls = new HashMap<Coordinate, MapTile>(); 
 				
 		this.map = new HashMap<Coordinate,MapTile>();
@@ -54,11 +64,36 @@ public class MapSearch {
        
 	}
 	
+	
+	
+	public void visit(Coordinate c) {
+		
+		visited.add(c);
+		
+	}
+	
+	public boolean visited(Coordinate c) {
+		
+		
+		for (Coordinate inspected: visited) {
+			if (inspected.equals(c)) {
+				return true;
+			}
+			
+		
+				
+		}
+		
+		return false;
+		
+	}
+	
 	// Add the new information we've gained to our maps 
 	public void applyNewView(HashMap<Coordinate, MapTile> mapView) {
 		      
         	
         	for (Coordinate coord: mapView.keySet()) {
+        		
         		
                 
                 MapTile tile = mapView.get(coord); 
@@ -71,13 +106,17 @@ public class MapSearch {
                 // If wall, add to walls 
                 if (tile.isType(Type.WALL)) {
                 	this.walls.put(coord, tile);
+                	
+                    this.map.put(coord, tile);
+
                 }
                 
                 // If Finish, add to exits 
                 else if (tile.isType(Type.FINISH)) {
                 	this.exits.put(coord, tile);
 
-                	
+                    this.map.put(coord, tile);
+
                 }
                 
                 // If a parcel trap, add to parcels 
@@ -89,9 +128,17 @@ public class MapSearch {
                 	
                 	this.parcels.put(coord,tile);
                 	
-                	
+                    this.map.put(coord, tile);
+
                 	
                 	}
+                }
+                
+                else if (tile.isType(Type.ROAD)) {
+                    this.map.put(coord, tile);
+                	this.parcels.remove(coord);
+
+
                 }
                 
                 // if empty, remove from parcels to ensure we're no longer tracking parcels after they've been eaten
@@ -100,7 +147,6 @@ public class MapSearch {
                 	this.parcels.remove(coord);
                 }
                 
-                this.map.put(coord, tile);
                 
         		
         	}
@@ -108,10 +154,24 @@ public class MapSearch {
         } 
         
         
-        }
+}
         
 
 	
+	
+	
+	public ArrayList<Coordinate> getVisited() {
+		return visited;
+	}
+
+
+
+	public void setVisited(ArrayList<Coordinate> visited) {
+		this.visited = visited;
+	}
+
+
+
 	// Simple BFS Search, returning the next coordinate along the shortest valid (No walls on the path (can accomodate for traps later) path to our goal point 
 	public Coordinate BFSSearch(Coordinate start, Coordinate goal){
 		
@@ -161,8 +221,8 @@ public class MapSearch {
 			for (Coordinate c: adjacentPotential) {
 				
 				if (!walls.containsKey(c) && map.containsKey(c)) {
+					
 					adjacent.add(c);
-//					System.out.println(c.toString());
 				}
 				
 			}
